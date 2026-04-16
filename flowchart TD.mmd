@@ -1,0 +1,78 @@
+flowchart TD
+
+    subgraph SC[Smart Contract Calls]
+        C1[MockUSDC.mint]
+        C2[MockUSDC.approve for VaultT]
+        C3[VaultT.deposit]
+        C4[VaultT.redeem]
+        C5[MockUSDC.approve for VaultD]
+        C6[VaultD.deposit]
+        C7[VaultD.redeem]
+    end
+
+    subgraph U[User Workflow]
+        A[Open OUCHUI app]
+        B[Connect wallet]
+        C[Wallet connected]
+        D[Ask for MockUSDC]
+        E[Receive MockUSDC]
+        F[Split MockUSDC into two parts]
+        G[Approve funds for OUCHUI-T]
+        H[Deposit into OUCHUI-T]
+        I[Receive OUCHUI-T shares]
+        J[Approve funds for OUCHUI-D]
+        K[Deposit into OUCHUI-D]
+        L[Receive OUCHUI-D shares]
+        M[Later decide to withdraw]
+        N[Redeem OUCHUI-T shares]
+        O[Receive funds back from OUCHUI-T]
+        P[Redeem OUCHUI-D shares]
+        Q[Receive funds back from OUCHUI-D]
+    end
+
+    subgraph FE[Frontend Layer]
+        FE1[RainbowKit ConnectButton]
+        FE2[wagmi / viem write call]
+        FE3[Frontend waits for tx confirmation]
+        FE4[Frontend refreshes balances and shares]
+    end
+
+    A --> B --> C --> D --> E --> F
+    F --> G --> H --> I --> M
+    F --> J --> K --> L --> M
+    M --> N --> O
+    M --> P --> Q
+
+    D -.-> C1
+    C1 -.-> E
+
+    G -.-> C2
+    C2 -.-> H
+    H -.-> C3
+    C3 -.-> I
+
+    J -.-> C5
+    C5 -.-> K
+    K -.-> C6
+    C6 -.-> L
+
+    N -.-> C4
+    C4 -.-> O
+
+    P -.-> C7
+    C7 -.-> Q
+
+    B -.-> FE1
+    G -.-> FE2
+    H -.-> FE3
+    I -.-> FE4
+
+    J -.-> FE2
+    K -.-> FE3
+    L -.-> FE4
+
+    N -.-> FE3
+    O -.-> FE4
+
+    P -.-> FE3
+    Q -.-> FE4
