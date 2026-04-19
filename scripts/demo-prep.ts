@@ -5,12 +5,12 @@ async function main() {
   
   const mockUSDC = await ethers.getContractAt(
     "MockUSDC",
-    "0x1DbA4d24ED6f691D2658D87EEe3D1e4Aff2867f6"
+    "0x5561791E7Edb27640766A38f701757952Da1ddB5"
   );
   
   const vaultMockYield = await ethers.getContractAt(
     "VaultMockYield", 
-    "0x49362cf0a1Bc54801Ded60Fda5be2BCAefC03eb6"
+    "0x4eA6E1cBc40B13873e314db5148d85107c70F689"
   );
   
   const deployer = "0x3Cebb88aC6eA09d20Ec3Ab53D0caa77860C28184";

@@ -5,7 +5,7 @@ async function main() {
 
   const mockUSDC = await ethers.getContractAt(
     "MockUSDC",
-    "0x1DbA4d24ED6f691D2658D87EEe3D1e4Aff2867f6"
+    "0x5561791E7Edb27640766A38f701757952Da1ddB5"
   );
 
   const recipient = "0x3Cebb88aC6eA09d20Ec3Ab53D0caa77860C28184";
