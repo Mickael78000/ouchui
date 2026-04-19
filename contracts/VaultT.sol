@@ -92,14 +92,6 @@ contract VaultT is ERC4626, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Returns the number of decimals for the share token
-     * @dev Matches the underlying asset (6 for MockUSDC)
-     */
-    function decimals() public view override(ERC4626) returns (uint8) {
-        return super.decimals();
-    }
-
-    /**
      * @notice Total assets owned by VaultT = idle MockUSDC + deployed position
      * @dev deployed = strategy.convertToAssets(strategy.balanceOf(this))
      *      idle     = MockUSDC.balanceOf(this)

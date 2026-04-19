@@ -29,7 +29,8 @@ Ce projet implémente un système de vaults avec **deux vaults ERC-4626 indépen
 ✅ Vault stratégique (VaultT) avec auto-déploiement
 ✅ Yield mock configurable (VaultMockYield)
 ✅ Contrôle d'accès Ownable
-✅ Suite de tests complète (77 tests + 3 fuzz)
+✅ Suite de tests complète (83 tests : 70 unitaires + 13 fuzz Solidity)
+✅ Fuzz tests natifs Hardhat 3 — 4 propriétés ERC-4626 × 3 vaults × 1000 runs
 ✅ Protection donation attack (virtual shares OZ)
 ✅ Isolation cross-vault
 ```
@@ -53,10 +54,10 @@ pnpm install
 npx hardhat build
 ```
 
-### 3. Tests (77 tests + fuzz)
+### 3. Tests (83 tests : 70 unitaires + 13 fuzz Solidity)
 
 ```bash
-npx hardhat test                    # Unitaires + Fuzzing
+npx hardhat test                    # Unitaires Mocha + Fuzz Solidity (1000 runs/test)
 npx hardhat coverage                # Couverture ≥95%
 ```
 
@@ -88,25 +89,39 @@ npx hardhat run scripts/mint-demo.ts --network sepolia      # Mint 100k mUSDC
 npx hardhat run scripts/demo-prep.ts --network sepolia      # Config yield 5%
 ```
 
-## Couverture Tests (77 tests)
+## Couverture Tests (83 tests)
+
+### Tests unitaires Mocha (70)
 
 | Catégorie | Tests | Couverture |
 | --- | --- | --- |
-| **Core ERC-4626** | 35  | deposit/mint/withdraw/redeem x3 vaults |
+| **Core ERC-4626** | 35  | deposit/mint/withdraw/redeem × 3 vaults |
 | **Stratégie VaultT** | 20  | Auto-deploy, rapatriement, totalAssets |
 | **Yield Mock** | 12  | Rate, accrual temporel, revert non-owner |
 | **Sécurité** | 10  | Ownable, donation attack, isolation |
-| **Edge Cases** | 15  | Zéro, décimales, multi-users |
-| **Fuzz Tests** | **3** | Montants aléatoires VaultD/VaultT |
+| **Edge Cases** | 6   | Zéro, décimales, premier dépôt |
 
-**Assertions critiques** :
+### Fuzz tests Solidity natifs Hardhat 3 (13 × 1000 runs)
+
+Fichier : `test/VaultsFuzz.sol` — runner Solidity natif, pas Mocha.
+
+| Propriété ERC-4626 vérifiée | VaultD | VaultT | VaultMockYield |
+| --- | --- | --- | --- |
+| `deposit → redeem` round-trip exact | ✅ | ✅ (±1 wei) | ✅ |
+| `previewDeposit` ≤ shares réelles | ✅ | — | — |
+| `previewRedeem` ≤ assets réels | — | ✅ | — |
+| `previewMint` ≥ assets consommés | ✅ | ✅ | ✅ |
+| `previewWithdraw` ≥ shares brûlées | ✅ | ✅ | ✅ |
+| Fully backed après accrual same-block | — | — | ✅ |
+
+**Invariants principaux** :
 
 ```
 ✅ totalAssets() == balance réelle (fully backed)
-✅ Previews exacts avant/après yield
+✅ 4 propriétés ERC-4626 spec couvertes par fuzz
 ✅ Virtual shares protègent donation attacks
 ✅ Isolation VaultD ↔ VaultT
-✅ Décimales 6 (1 wei → 999999 USDC)
+✅ Décimales 6 (1 wei → 999 999 USDC)
 ```
 
 ## Détails Techniques
@@ -131,7 +146,8 @@ contracts/
 └── VaultD.sol               # D-tranche (simple 1:1)
 
 test/
-└── Vaults.ts                # 77 tests + 3 fuzz
+├── Vaults.ts                # 70 tests unitaires (Mocha)
+└── VaultsFuzz.sol           # 13 fuzz tests Solidity natifs (1000 runs/test)
 
 ignition/modules/
 └── OuchuiVaults.ts          # Déploiement séquentiel
@@ -147,7 +163,9 @@ scripts/
 🔸 Hardhat 3 : networkHelpers.time.increase()
 🔸 ERC4626 hooks : _deposit/_withdraw (pas _transferIn)
 🔸 Matchers : .revertedWithCustomError() 
-🔸 Fuzz natif : npx hardhat test --fuzz-runs 1000
+🔸 Fuzz natif : test/VaultsFuzz.sol — fonctions testFuzz_* avec paramètres typés
+🔸 Bornage : helper bound(x, lo, hi) sans biais de modulo (pas de vm.assume)
+🔸 Asymétrie spec : previewDeposit/Redeem → actual >= preview | previewMint/Withdraw → preview >= actual
 🔸 Couverture : npx hardhat coverage (cible ≥95%)
 ```
 

@@ -33,12 +33,4 @@ contract VaultD is ERC4626, Ownable {
         if (owner_ == address(0)) revert ZeroAddress();
     }
 
-    /**
-     * @notice Returns the number of decimals for the share token
-     * @dev Inherits from ERC4626 which uses the underlying asset's decimals (6 for USDC)
-     * This keeps calculations simple: 1 share = 1 asset at 1:1 ratio
-     */
-    function decimals() public view override(ERC4626) returns (uint8) {
-        return super.decimals();
-    }
 }

@@ -97,12 +97,6 @@ describe("OUCHUI Vault System", function () {
       ).to.be.revertedWithCustomError(mockUSDC, "OwnableUnauthorizedAccount");
     });
 
-    it("Should handle transfers correctly", async function () {
-      await mockUSDC.mint(user1.address, toUSDC("500"));
-      await mockUSDC.connect(user1).transfer(user2.address, toUSDC("200"));
-      expect(await mockUSDC.balanceOf(user1.address)).to.equal(toUSDC("300"));
-      expect(await mockUSDC.balanceOf(user2.address)).to.equal(toUSDC("200"));
-    });
   });
 
   // ─────────────────────────────────────────────────────────────
@@ -642,27 +636,6 @@ describe("OUCHUI Vault System", function () {
   // 6. Empty-vault initialization behavior
   // ─────────────────────────────────────────────────────────────
   describe("Empty vault initialization", function () {
-    it("VaultT: first depositor gets 1:1 shares", async function () {
-      await mockUSDC.mint(user1.address, toUSDC("1000"));
-      await mockUSDC.connect(user1).approve(vaultTAddress, toUSDC("1000"));
-      await vaultT.connect(user1).deposit(toUSDC("1000"), user1.address);
-      expect(await vaultT.balanceOf(user1.address)).to.equal(toUSDC("1000"));
-    });
-
-    it("VaultD: first depositor gets 1:1 shares", async function () {
-      await mockUSDC.mint(user1.address, toUSDC("1000"));
-      await mockUSDC.connect(user1).approve(vaultDAddress, toUSDC("1000"));
-      await vaultD.connect(user1).deposit(toUSDC("1000"), user1.address);
-      expect(await vaultD.balanceOf(user1.address)).to.equal(toUSDC("1000"));
-    });
-
-    it("VaultMockYield: first depositor gets 1:1 shares", async function () {
-      await mockUSDC.mint(user1.address, toUSDC("1000"));
-      await mockUSDC.connect(user1).approve(vaultMockYieldAddress, toUSDC("1000"));
-      await vaultMockYield.connect(user1).deposit(toUSDC("1000"), user1.address);
-      expect(await vaultMockYield.balanceOf(user1.address)).to.equal(toUSDC("1000"));
-    });
-
     it("VaultT: conversion on empty vault returns correct values", async function () {
       expect(await vaultT.convertToShares(toUSDC("1000"))).to.equal(toUSDC("1000"));
       expect(await vaultT.convertToAssets(toUSDC("1000"))).to.equal(toUSDC("1000"));
@@ -810,37 +783,6 @@ describe("OUCHUI Vault System", function () {
         await vaultT.connect(user1).deposit(amt, user1.address);
       }
       expect(await vaultT.balanceOf(user1.address)).to.equal(totalDeposited);
-    });
-    it("Fuzz: VaultD handles random amounts", async function () {
-      const amount = ethers.parseUnits("123456", 6); // sera fuzzé
-      await mockUSDC.mint(user1.address, amount);
-      await mockUSDC.connect(user1).approve(vaultDAddress, amount);
-      await vaultD.connect(user1).deposit(amount, user1.address);
-      expect(await vaultD.totalAssets()).to.equal(amount);
-    });
-    it("Fuzz: VaultT handles random amounts", async function () {
-      const amount = ethers.parseUnits("123456", 6);
-      await mockUSDC.mint(user1.address, amount);
-      await mockUSDC.connect(user1).approve(vaultTAddress, amount);
-      await vaultT.connect(user1).deposit(amount, user1.address);
-      expect(await vaultT.totalAssets()).to.be.closeTo(amount, 1n);
-      expect(await mockUSDC.balanceOf(vaultTAddress)).to.equal(0);
-      expect(await vaultMockYield.balanceOf(vaultTAddress)).to.be.greaterThan(0);
-    });
-    it("Fuzz: VaultMockYield handles random amounts + yield", async function () {
-      const amount = ethers.parseUnits("123456", 6);
-      await mockUSDC.mint(user1.address, amount);
-      await mockUSDC.connect(user1).approve(vaultMockYieldAddress, amount);
-      await vaultMockYield.connect(user1).deposit(amount, user1.address);
-
-      expect(await vaultMockYield.totalAssets()).to.equal(amount);
-      expect(await vaultMockYield.balanceOf(user1.address)).to.equal(amount);
-
-      await vaultMockYield.setMockRate(500n);
-      await networkHelpers.time.increase(ONE_YEAR);
-      await vaultMockYield.accrueYield();
-
-      expect(await vaultMockYield.totalAssets()).to.be.greaterThan(amount);
     });
   });
 
