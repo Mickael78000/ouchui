@@ -827,13 +827,20 @@ describe("OUCHUI Vault System", function () {
       expect(await mockUSDC.balanceOf(vaultTAddress)).to.equal(0);
       expect(await vaultMockYield.balanceOf(vaultTAddress)).to.be.greaterThan(0);
     });
-    it("Fuzz: VaultMockYield handles random amounts", async function () {
+    it("Fuzz: VaultMockYield handles random amounts + yield", async function () {
       const amount = ethers.parseUnits("123456", 6);
       await mockUSDC.mint(user1.address, amount);
       await mockUSDC.connect(user1).approve(vaultMockYieldAddress, amount);
       await vaultMockYield.connect(user1).deposit(amount, user1.address);
+
       expect(await vaultMockYield.totalAssets()).to.equal(amount);
       expect(await vaultMockYield.balanceOf(user1.address)).to.equal(amount);
+
+      await vaultMockYield.setMockRate(500n);
+      await networkHelpers.time.increase(ONE_YEAR);
+      await vaultMockYield.accrueYield();
+
+      expect(await vaultMockYield.totalAssets()).to.be.greaterThan(amount);
     });
   });
 

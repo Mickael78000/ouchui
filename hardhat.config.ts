@@ -26,4 +26,13 @@ export default defineConfig({
       accounts: process.env.SEPOLIA_PRIVATE_KEY ? [process.env.SEPOLIA_PRIVATE_KEY] : [],
     },
   },
+  test: {
+    solidity: {
+      fuzz: {
+        runs: 1000,           // 1000 runs par fuzz test
+        maxTestRejects: 500,  // Max rejets assume()
+        seed: "1234"          // Seed reproductible
+      }
+    }
+  }
 });

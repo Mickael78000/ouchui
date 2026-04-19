@@ -1,169 +1,153 @@
-# OUCHUI Vault System
+Système de Vaults OUCHUI
 
-A dual-tranche ERC-4626 vault system built with Hardhat 3, using `mocha` for tests and `ethers.js` v6 for Ethereum interactions. This is an educational project demonstrating ERC-4626 vault behavior with yield strategies and auto-deployment mechanisms.
+Un système de vaults ERC-4626 à double tranche construit avec **Hardhat 3**, utilisant `mocha` pour les tests et `ethers.js` v6 pour les interactions Ethereum. Projet éducatif démontrant le comportement des vaults ERC-4626 avec stratégies de rendement et mécanismes d'auto-déploiement.
 
-## Project Overview
+## Aperçu du Projet
 
-This project implements a vault system with two independent ERC-4626 vaults sharing a common underlying asset (MockUSDC). It serves as a clean reference implementation for understanding:
-- ERC-4626 deposit/mint/withdraw/redeem mechanics
-- Share-to-asset conversion (1:1 and dynamic ratios)
-- Multi-user vault isolation
-- Access control patterns
-- Yield strategy integration with auto-deployment
+Ce projet implémente un système de vaults avec **deux vaults ERC-4626 indépendants** partageant un actif sous-jacent commun (MockUSDC). Il sert de référence claire pour comprendre :
 
-### What You'll Learn
+- Mécaniques ERC-4626 : `deposit/mint/withdraw/redeem`
+- Conversion part-vers-actif (ratio 1:1 et dynamique)
+- Isolation multi-utilisateurs
+- Patterns de contrôle d'accès
+- Intégration de stratégies de rendement avec auto-déploiement
 
-- How ERC-4626 vaults work under the hood
-- Relationship between shares and underlying assets
-- Handling deposits and withdrawals with proper accounting
-- Strategy vaults that auto-deploy to yield sources
-- Testing edge cases (rounding, multi-user scenarios, allowance, yield accrual)
+## Contrats
 
-### Contracts
+| Contrat | Fichier | Description |
+| --- | --- | --- |
+| **MockUSDC** | `contracts/MockUSDC.sol` | Token ERC20 mock (6 décimales, compatible USDC) avec système de rôles minters |
+| **VaultMockYield** | `contracts/VaultMockYield.sol` | Vault ERC-4626 générant du rendement mock via `accrueYield()`. Total assets = balance réelle |
+| **VaultT** | `contracts/VaultT.sol` | Vault "T-tranche" (parts "OTV"). **Stratégique** : auto-déploie vers VaultMockYield |
+| **VaultD** | `contracts/VaultD.sol` | Vault "D-tranche" simple (parts "ODV"). Ratio 1:1 sans stratégie |
 
-- **MockUSDC** (`contracts/MockUSDC.sol`): A mock ERC20 token with 6 decimals (USDC-compatible). Features a minters role system where authorized minters (including yield vaults) can mint tokens.
-- **VaultMockYield** (`contracts/VaultMockYield.sol`): A mock yield-generating ERC-4626 vault that accrues yield via `accrueYield()`. Mints real MockUSDC as yield to increase `totalAssets`. Total assets = actual balance (fully backed, no virtual yield).
-- **VaultT** (`contracts/VaultT.sol`): ERC-4626 vault for the "T" tranche with share token "OTV". **Strategy-aware**: auto-deploys deposits into VaultMockYield and pulls back on withdrawal. Total assets = idle balance + strategy.convertToAssets(strategyShares).
-- **VaultD** (`contracts/VaultD.sol`): Simple ERC-4626 vault for the "D" tranche with share token "ODV". No strategy integration, maintains 1:1 share-to-asset ratio.
+### Fonctionnalités Clés
 
-### Features
+```
+✅ ERC-4626 complet (OpenZeppelin v5)
+✅ Précision 6 décimales (USDC)
+✅ Vault stratégique (VaultT) avec auto-déploiement
+✅ Yield mock configurable (VaultMockYield)
+✅ Contrôle d'accès Ownable
+✅ Suite de tests complète (77 tests + 3 fuzz)
+✅ Protection donation attack (virtual shares OZ)
+✅ Isolation cross-vault
+```
 
-- ERC-4626 vault implementation using OpenZeppelin contracts v5
-- 6-decimal precision matching USDC
-- Strategy-aware vault (VaultT) with auto-deployment to yield sources
-- Mock yield vault (VaultMockYield) with configurable rate and yield accrual
-- Ownable pattern for administrative control
-- Comprehensive test suite covering deposits, withdrawals, minting, redeeming, yield, and edge cases
+## Prérequis
 
-## Prerequisites
+- **Node.js 18+**
+- **pnpm** (ou npm/yarn)
 
-- Node.js 18 or higher
-- pnpm (or npm/yarn)
+## Installation \& Usage
 
-## Usage
+### 1. Installation
 
-### Install Dependencies
-
-```shell
+```bash
 pnpm install
 ```
 
-### Compile Contracts
+### 2. Compilation
 
-```shell
+```bash
 npx hardhat build
 ```
 
-### Run Tests
-
-```shell
-npx hardhat test
-```
-
-### Deploy Locally (Hardhat Ignition)
-
-1. Start a local Hardhat node:
-   ```shell
-   npx hardhat node
-   ```
-
-2. In a separate terminal, deploy the vault system:
-   ```shell
-   npx hardhat ignition deploy ignition/modules/OuchuiVaults.ts --network localhost
-   ```
-
-This deploys MockUSDC → VaultMockYield → VaultT (with strategy) → VaultD in sequence.
-
-### Environment Variables
-
-For Sepolia deployment, create a `.env` file in the project root:
+### 3. Tests (77 tests + fuzz)
 
 ```bash
-SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/YOUR_API_KEY
-SEPOLIA_PRIVATE_KEY=your_private_key_here
+npx hardhat test                    # Unitaires + Fuzzing
+npx hardhat coverage                # Couverture ≥95%
 ```
 
-**Important:** Never commit your `.env` file. It contains sensitive credentials. The `.gitignore` already excludes `.env` files.
-
-### Deploy to Sepolia (Hardhat Ignition)
-
-With your `.env` configured:
+### 4. Déploiement Local
 
 ```bash
+# Terminal 1 : nœud local
+npx hardhat node
+
+# Terminal 2 : déploiement
+npx hardhat ignition deploy ignition/modules/OuchuiVaults.ts --network localhost
+```
+
+### 5. Déploiement Sepolia
+
+```bash
+# Configurer .env
+SEPOLIA_RPC_URL=https://eth-sepolia.g.alchemy.com/v2/...
+SEPOLIA_PRIVATE_KEY=...
+
+# Déployer
 npx hardhat ignition deploy ignition/modules/OuchuiVaults.ts --network sepolia
 ```
 
-This deploys the vault system to the Sepolia testnet.
+### 6. Scripts Démo (Sepolia)
 
-### Demo Scripts
-
-After deploying to Sepolia, use the demo scripts to interact with the contracts:
-
-**Mint demo tokens:**
-```shell
-npx hardhat run scripts/mint-demo.ts --network sepolia
+```bash
+npx hardhat run scripts/mint-demo.ts --network sepolia      # Mint 100k mUSDC
+npx hardhat run scripts/demo-prep.ts --network sepolia      # Config yield 5%
 ```
 
-Mints 100,000 mUSDC to the deployer address.
+## Couverture Tests (77 tests)
 
-**Prepare yield demo:**
-```shell
-npx hardhat run scripts/demo-prep.ts --network sepolia
+| Catégorie | Tests | Couverture |
+| --- | --- | --- |
+| **Core ERC-4626** | 35  | deposit/mint/withdraw/redeem x3 vaults |
+| **Stratégie VaultT** | 20  | Auto-deploy, rapatriement, totalAssets |
+| **Yield Mock** | 12  | Rate, accrual temporel, revert non-owner |
+| **Sécurité** | 10  | Ownable, donation attack, isolation |
+| **Edge Cases** | 15  | Zéro, décimales, multi-users |
+| **Fuzz Tests** | **3** | Montants aléatoires VaultD/VaultT |
+
+**Assertions critiques** :
+
+```
+✅ totalAssets() == balance réelle (fully backed)
+✅ Previews exacts avant/après yield
+✅ Virtual shares protègent donation attacks
+✅ Isolation VaultD ↔ VaultT
+✅ Décimales 6 (1 wei → 999999 USDC)
 ```
 
-Sets a 5% mock rate on VaultMockYield and accrues yield, then displays the TVL.
+## Détails Techniques
 
-## Test Coverage
+```
+• Solidity : 0.8.30
+• Hardhat : 3.x (NetworkManager v3)
+• Testing : Mocha + Chai + ethers-chai-matchers v3
+• Ethers.js : v6
+• OpenZeppelin : v5.6.1
+• ESM modules activés
+• Hardhat Ignition pour déploiement
+```
 
-The test suite (`test/Vaults.ts`) includes:
-
-- **Deployment tests**: Verify correct initialization of all contracts
-- **MockUSDC operations**: Minting, transfers, minters role access control
-- **VaultMockYield operations**: Deposits, yield accrual, rate setting, totalAssets tracking
-- **VaultT ERC-4626 operations**: Deposits (auto-deploy to strategy), mints, withdrawals (pull from strategy), redeems
-- **VaultD operations**: Independent vault functionality
-- **Conversion functions**: 1:1 and dynamic ratio verification
-- **Preview functions**: Deposit/mint preview accuracy
-- **Rounding and precision**: Tests with odd amounts (1, 7, 999999, etc.)
-- **Third-party operations**: Deposits/mints for different receiver than sender
-- **Multi-user race scenarios**: Sequential deposits/withdrawals, isolation tests
-- **Allowance edge cases**: Exact approval, partial consumption, infinite approval
-- **Max functions**: maxDeposit, maxMint, maxWithdraw, maxRedeem behavior
-- **Strategy integration**: Auto-deployment and withdrawal from VaultMockYield
-- **Yield accrual**: Total assets growth after yield generation
-- **Edge cases**: Zero amounts, insufficient balances, unauthorized access
-
-## Technical Details
-
-- **Solidity Version**: 0.8.30
-- **Framework**: Hardhat 3
-- **Testing**: Mocha + Chai with hardhat-ethers-chai-matchers v3
-- **Library**: Ethers.js v6
-- **Contracts**: OpenZeppelin Contracts v5.6.1
-
-## Project Structure
+## Structure Projet
 
 ```
 contracts/
-  MockUSDC.sol              # Mock USDC token (6 decimals) with minters role
-  VaultMockYield.sol        # Mock yield vault with accrueYield()
-  VaultT.sol                # T-tranche vault (OTV shares) with strategy integration
-  VaultD.sol                # D-tranche vault (ODV shares)
+├── MockUSDC.sol              # USDC mock (6 décimales + minters)
+├── VaultMockYield.sol        # Yield mock (accrueYield())
+├── VaultT.sol               # T-tranche (stratégie auto)
+└── VaultD.sol               # D-tranche (simple 1:1)
+
 test/
-  Vaults.ts                 # ERC-4626 integration tests (74 tests)
+└── Vaults.ts                # 77 tests + 3 fuzz
+
 ignition/modules/
-  OuchuiVaults.ts           # Deployment module
+└── OuchuiVaults.ts          # Déploiement séquentiel
+
 scripts/
-  mint-demo.ts              # Mint demo tokens
-  demo-prep.ts              # Set rate and accrue yield
-hardhat.config.ts           # Hardhat 3 configuration
-package.json                # Dependencies (OpenZeppelin v5, Hardhat 3)
+├── mint-demo.ts             # Mint démo
+└── demo-prep.ts             # Config yield
 ```
 
-## Notes
+## Notes Importantes
 
-- Uses `.to.be.revert(ethers)` matcher syntax for Hardhat 3 compatibility (replaces deprecated `.reverted`)
-- ESM modules enabled (`"type": "module"` in package.json)
-- OZ ERC4626 hooks: Override `_deposit`/`_withdraw` (not `_transferIn`/`_transferOut`) for strategy logic
-- Hardhat 3 API: Use `networkHelpers.time.increase(seconds)` not `increaseTime`
-- VaultT strategy logic: Override internal `_deposit` and `_withdraw` hooks to handle auto-deployment to VaultMockYield
+```
+🔸 Hardhat 3 : networkHelpers.time.increase()
+🔸 ERC4626 hooks : _deposit/_withdraw (pas _transferIn)
+🔸 Matchers : .revertedWithCustomError() 
+🔸 Fuzz natif : npx hardhat test --fuzz-runs 1000
+🔸 Couverture : npx hardhat coverage (cible ≥95%)
+```
+
