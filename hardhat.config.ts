@@ -1,9 +1,10 @@
 import hardhatToolboxMochaEthersPlugin from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import { defineConfig } from "hardhat/config";
 import "dotenv/config";
+import hardhatTypechain from "@nomicfoundation/hardhat-typechain";
 
 export default defineConfig({
-  plugins: [hardhatToolboxMochaEthersPlugin],
+  plugins: [hardhatToolboxMochaEthersPlugin, hardhatTypechain],
   solidity: {
     version: "0.8.30",
     settings: {

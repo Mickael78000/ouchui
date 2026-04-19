@@ -1,20 +1,20 @@
 import { expect } from "chai";
 import hre from "hardhat";
-import { parseUnits, formatUnits } from "ethers";
+import "@nomicfoundation/hardhat-ethers-chai-matchers";
+import type { MockUSDC, VaultMockYield, VaultT, VaultD } from "../types/ethers-contracts/index.js";
 
 const { ethers, networkHelpers } = await hre.network.connect();
 
-const toUSDC = (amount: string) => parseUnits(amount, 6);
-const fromUSDC = (amount: bigint) => formatUnits(amount, 6);
+const toUSDC = (amount: string) => ethers.parseUnits(amount, 6);
 
 const ONE_YEAR = 365 * 24 * 60 * 60;
 const ONE_DAY = 24 * 60 * 60;
 
 describe("OUCHUI Vault System", function () {
-  let mockUSDC: any;
-  let vaultMockYield: any;
-  let vaultT: any;
-  let vaultD: any;
+  let mockUSDC: MockUSDC;
+  let vaultMockYield: VaultMockYield;
+  let vaultT: VaultT;
+  let vaultD: VaultD;
 
   let owner: any;
   let user1: any;
@@ -396,7 +396,7 @@ describe("OUCHUI Vault System", function () {
         await vaultT.connect(user1).mint(toUSDC("2000"), user1.address);
 
         expect(await mockUSDC.balanceOf(vaultTAddress)).to.equal(0);
-        expect(await vaultMockYield.balanceOf(vaultTAddress)).to.be.greaterThan(0);
+        expect(await vaultMockYield.balanceOf(vaultTAddress)).to.be.closeTo(toUSDC("2000"), 1n);
       });
 
       it("Should handle multiple deposits", async function () {
@@ -445,7 +445,7 @@ describe("OUCHUI Vault System", function () {
       it("Should revert when withdrawing more than owned", async function () {
         await expect(
           vaultT.connect(user1).withdraw(toUSDC("11000"), user1.address, user1.address)
-        ).to.be.revert(ethers);
+        ).to.be.revertedWithCustomError(vaultT, "ERC4626ExceededMaxWithdraw");
       });
     });
 
@@ -781,7 +781,7 @@ describe("OUCHUI Vault System", function () {
     });
 
     it("VaultT: sub-dollar amounts (0.01 USDC = 10000 units)", async function () {
-      const amount = parseUnits("0.01", 6);
+      const amount = toUSDC("0.01");
       await mockUSDC.connect(user1).approve(vaultTAddress, amount);
       await vaultT.connect(user1).deposit(amount, user1.address);
       expect(await vaultT.balanceOf(user1.address)).to.equal(amount);
@@ -810,6 +810,30 @@ describe("OUCHUI Vault System", function () {
         await vaultT.connect(user1).deposit(amt, user1.address);
       }
       expect(await vaultT.balanceOf(user1.address)).to.equal(totalDeposited);
+    });
+    it("Fuzz: VaultD handles random amounts", async function () {
+      const amount = ethers.parseUnits("123456", 6); // sera fuzzé
+      await mockUSDC.mint(user1.address, amount);
+      await mockUSDC.connect(user1).approve(vaultDAddress, amount);
+      await vaultD.connect(user1).deposit(amount, user1.address);
+      expect(await vaultD.totalAssets()).to.equal(amount);
+    });
+    it("Fuzz: VaultT handles random amounts", async function () {
+      const amount = ethers.parseUnits("123456", 6);
+      await mockUSDC.mint(user1.address, amount);
+      await mockUSDC.connect(user1).approve(vaultTAddress, amount);
+      await vaultT.connect(user1).deposit(amount, user1.address);
+      expect(await vaultT.totalAssets()).to.be.closeTo(amount, 1n);
+      expect(await mockUSDC.balanceOf(vaultTAddress)).to.equal(0);
+      expect(await vaultMockYield.balanceOf(vaultTAddress)).to.be.greaterThan(0);
+    });
+    it("Fuzz: VaultMockYield handles random amounts", async function () {
+      const amount = ethers.parseUnits("123456", 6);
+      await mockUSDC.mint(user1.address, amount);
+      await mockUSDC.connect(user1).approve(vaultMockYieldAddress, amount);
+      await vaultMockYield.connect(user1).deposit(amount, user1.address);
+      expect(await vaultMockYield.totalAssets()).to.equal(amount);
+      expect(await vaultMockYield.balanceOf(user1.address)).to.equal(amount);
     });
   });
 
@@ -846,12 +870,12 @@ describe("OUCHUI Vault System", function () {
       // user2 cannot withdraw from VaultT
       await expect(
         vaultT.connect(user2).withdraw(1, user2.address, user2.address)
-      ).to.be.revert(ethers);
+      ).to.be.revertedWithCustomError(vaultT, "ERC4626ExceededMaxWithdraw");
 
       // user1 cannot withdraw from VaultD
       await expect(
         vaultD.connect(user1).withdraw(1, user1.address, user1.address)
-      ).to.be.revert(ethers);
+      ).to.be.revertedWithCustomError(vaultD, "ERC4626ExceededMaxWithdraw");
     });
   });
 });

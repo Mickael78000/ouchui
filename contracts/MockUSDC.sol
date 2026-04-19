@@ -24,6 +24,9 @@ contract MockUSDC is ERC20, Ownable {
     /// @dev Caller is neither the owner nor an authorized minter
     error NotMinterOrOwner(address caller);
 
+    /// @dev Address cannot be zero
+    error ZeroAddress();
+
     /**
      * @notice Constructor initializes the token with name, symbol, and sets owner
      * @param initialOwner The address that will own the contract and can mint tokens
@@ -31,7 +34,8 @@ contract MockUSDC is ERC20, Ownable {
     constructor(address initialOwner)
         ERC20("Mock USD Coin", "mUSDC")
         Ownable(initialOwner)
-    {}
+    {
+    }
 
     /**
      * @notice Returns the number of decimals (6 for USDC compatibility)
@@ -47,6 +51,7 @@ contract MockUSDC is ERC20, Ownable {
      * @param status  true to authorize, false to revoke
      */
     function setMinter(address account, bool status) external onlyOwner {
+        if (account == address(0)) revert ZeroAddress();
         minters[account] = status;
         emit MinterUpdated(account, status);
     }

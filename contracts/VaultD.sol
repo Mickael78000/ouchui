@@ -20,11 +20,18 @@ contract VaultD is ERC4626, Ownable {
      * @param asset_ The ERC20 token used as underlying (MockUSDC address)
      * @param owner_ The address that will own this vault
      */
+
+    /// @dev One or more address parameters resolved to the zero address
+    error ZeroAddress();
+
     constructor(IERC20 asset_, address owner_) 
         ERC4626(asset_)
         ERC20("OUCHUI-D Vault Share", "ODV")
         Ownable(owner_)
-    {}
+    {
+        if (address(asset_) == address(0)) revert ZeroAddress();
+        if (owner_ == address(0)) revert ZeroAddress();
+    }
 
     /**
      * @notice Returns the number of decimals for the share token

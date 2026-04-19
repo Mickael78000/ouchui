@@ -7,6 +7,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC4626} from "@openzeppelin/contracts/interfaces/IERC4626.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title VaultT
@@ -25,14 +26,14 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  *
  *      Share decimals match MockUSDC (6).
  */
-contract VaultT is ERC4626, Ownable {
+contract VaultT is ERC4626, Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     /// @notice The strategy vault (VaultMockYield) where MockUSDC is deployed
     IERC4626 public immutable strategy;
 
-    /// @dev Strategy address must not be zero
-    error StrategyZeroAddress();
+    error ZeroAddress();
+    error StrategyAssetMismatch();
 
     /**
      * @notice Deploy the T-tranche vault
@@ -45,10 +46,49 @@ contract VaultT is ERC4626, Ownable {
         ERC20("OUCHUI-T Vault Share", "OTV")
         Ownable(owner_)
     {
-        if (address(strategy_) == address(0)) revert StrategyZeroAddress();
+        if (address(asset_) == address(0)) revert ZeroAddress();
+        if (address(strategy_) == address(0)) revert ZeroAddress();
+        if (owner_ == address(0)) revert ZeroAddress();
+        // point 3 : vérification asset
+        if (strategy_.asset() != address(asset_)) revert StrategyAssetMismatch();
         strategy = strategy_;
-        // Pre-approve strategy to spend MockUSDC held by this vault
-        asset_.approve(address(strategy_), type(uint256).max);
+        IERC20(address(asset_)).forceApprove(address(strategy_), type(uint256).max);
+    }
+
+    /**
+     * @notice ERC-4626 entry points — protected against reentrancy.
+     * @dev VaultT performs external calls to the strategy vault (VaultMockYield)
+     *      inside _deposit() and _withdraw():
+     *        - _deposit() calls strategy.deposit() after pulling assets from the user
+     *        - _withdraw() calls strategy.withdraw() before returning assets to the receiver
+     *
+     *      These cross-contract calls create a reentrancy surface: a malicious or
+     *      upgradeable strategy could re-enter one of these functions before the
+     *      state is fully settled. nonReentrant on all four public entry points
+     *      closes this vector by reverting any re-entrant call within the same tx.
+     *
+     *      The underlying checks-effects-interactions order (inherited from OZ ERC-4626)
+     *      is preserved; nonReentrant adds a second layer of defence.
+     */
+
+    function deposit(uint256 assets, address receiver)
+        public override nonReentrant returns (uint256) {
+        return super.deposit(assets, receiver);
+    }
+
+    function mint(uint256 shares, address receiver)
+        public override nonReentrant returns (uint256) {
+        return super.mint(shares, receiver);
+    }
+
+    function withdraw(uint256 assets, address receiver, address owner_)
+        public override nonReentrant returns (uint256) {
+        return super.withdraw(assets, receiver, owner_);
+    }
+
+    function redeem(uint256 shares, address receiver, address owner_)
+        public override nonReentrant returns (uint256) {
+        return super.redeem(shares, receiver, owner_);
     }
 
     /**
@@ -66,10 +106,7 @@ contract VaultT is ERC4626, Ownable {
      */
     function totalAssets() public view override returns (uint256) {
         uint256 idle = IERC20(asset()).balanceOf(address(this));
-        uint256 strategyShares = IERC20(address(strategy)).balanceOf(address(this));
-        uint256 deployed = strategyShares > 0
-            ? strategy.convertToAssets(strategyShares)
-            : 0;
+        uint256 deployed = strategy.convertToAssets(strategy.balanceOf(address(this)));
         return idle + deployed;
     }
 

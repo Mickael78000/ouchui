@@ -10,6 +10,7 @@ import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 /// @dev Minimal interface for MockUSDC's minter-aware mint function
 interface IMockUSDC {
     function mint(address to, uint256 amount) external;
+    function decimals() external view returns (uint8);
 }
 
 /**
@@ -61,6 +62,12 @@ contract VaultMockYield is ERC4626, Ownable {
     /// @dev Rate exceeds safe maximum
     error MockRateTooHigh(uint256 rateBps);
 
+    /// @dev One or more address parameters resolved to the zero address
+    error ZeroAddress();
+
+    /// @dev MockUSDC must have 6 decimals (USDC standard)
+    error InvalidDecimals(uint8 decimals);
+
     /// @dev Maximum allowed rate: 100% APY (10 000 bps)
     uint256 public constant MAX_RATE_BPS = 10_000;
 
@@ -74,7 +81,13 @@ contract VaultMockYield is ERC4626, Ownable {
         ERC20("OUCHUI Mock Yield Vault", "OMY")
         Ownable(owner_)
     {
+        if (address(asset_) == address(0)) revert ZeroAddress();
+        if (owner_ == address(0)) revert ZeroAddress();
         mockUsdc = IMockUSDC(address(asset_));
+        // Vérifier que mockUsdc a bien 6 décimales (USDC standard)
+        if (mockUsdc.decimals() != 6) {
+            revert InvalidDecimals(mockUsdc.decimals());
+        }
         lastAccrualTimestamp = block.timestamp;
     }
 
@@ -83,7 +96,7 @@ contract VaultMockYield is ERC4626, Ownable {
      * @dev Matches the underlying asset (6 for MockUSDC)
      */
     function decimals() public view override(ERC4626) returns (uint8) {
-        return super.decimals();
+        return mockUsdc.decimals();
     }
 
     // ── totalAssets() is NOT overridden ──
